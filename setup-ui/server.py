@@ -18,6 +18,35 @@ UI_VERSION = os.environ.get("UI_VERSION", "dev")
 HA_MCP_VERSION = os.environ.get("HA_MCP_VERSION", "")
 APP_VERSION = os.environ.get("APP_VERSION", "")
 
+# Feature flags exposed in the UI. Each entry: (env_var, label, warning)
+FEATURE_FLAGS = [
+    (
+        "ENABLE_BETA_FEATURES",
+        "Enable beta features (master switch)",
+        "⚠ These tools can permanently damage your Home Assistant. Take a backup first.",
+    ),
+    (
+        "ENABLE_YAML_CONFIG_EDITING",
+        "Enable YAML config editing",
+        "Allows AI to edit configuration.yaml and packages/*.yaml.",
+    ),
+    (
+        "ENABLE_FILESYSTEM_TOOLS",
+        "Enable filesystem tools",
+        "Gives the AI direct read/write access to your HA filesystem.",
+    ),
+    (
+        "ENABLE_CUSTOM_COMPONENT_INTEGRATION",
+        "Enable custom component integration",
+        "Allows AI to install and manage custom components (HACS etc.).",
+    ),
+    (
+        "ENABLE_CODE_MODE",
+        "Enable code mode",
+        "Allows AI to execute sandboxed Python scripts in Home Assistant.",
+    ),
+]
+
 
 def _read_env() -> dict[str, str]:
     result = {}
@@ -86,6 +115,21 @@ async def handle_index(request: web.Request) -> web.Response:
     status_icon = "✓" if connected else ("⚠" if token_set else "✗")
     mcp_url = request.url.origin().with_path("/mcp")
 
+    # Build feature flag checkboxes
+    flag_rows = ""
+    for env_var, label, warning in FEATURE_FLAGS:
+        checked = "checked" if env.get(env_var, "").lower() == "true" else ""
+        is_master = env_var == "ENABLE_BETA_FEATURES"
+        indent = "" if is_master else "margin-left:1.25rem;"
+        flag_rows += f"""
+        <div class="flag-row" style="{indent}">
+          <label class="flag-label">
+            <input type="checkbox" name="{env_var}" value="true" {checked}>
+            <span>{label}</span>
+          </label>
+          <div class="flag-warn">{warning}</div>
+        </div>"""
+
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -131,14 +175,26 @@ async def handle_index(request: web.Request) -> web.Response:
       border-radius: .5rem; border: 1px solid #334155;
     }}
     .mcp-box p {{ font-size: .8rem; color: #64748b; margin-bottom: .4rem; }}
-    .mcp-box code {{
-      font-size: .85rem; color: #7dd3fc; word-break: break-all;
-    }}
+    .mcp-box code {{ font-size: .85rem; color: #7dd3fc; word-break: break-all; }}
     .msg {{ margin-top: .75rem; font-size: .85rem; padding: .5rem .75rem;
       border-radius: .4rem; }}
     .msg.ok {{ background: #16a34a22; color: #4ade80; }}
     .msg.err {{ background: #dc262622; color: #f87171; }}
     .divider {{ border: none; border-top: 1px solid #1e3a5f; margin: 1.25rem 0; }}
+    details {{ margin-top: 1.25rem; }}
+    summary {{
+      cursor: pointer; font-size: .85rem; color: #94a3b8; padding: .5rem 0;
+      user-select: none; list-style: none; display: flex; align-items: center; gap: .4rem;
+    }}
+    summary::before {{ content: "▶"; font-size: .7rem; transition: transform .15s; }}
+    details[open] summary::before {{ transform: rotate(90deg); }}
+    .flag-row {{ margin: .6rem 0; }}
+    .flag-label {{
+      display: flex; align-items: flex-start; gap: .5rem;
+      font-size: .85rem; color: #cbd5e1; cursor: pointer; margin-bottom: .2rem;
+    }}
+    .flag-label input {{ margin-top: .15rem; flex-shrink: 0; }}
+    .flag-warn {{ font-size: .75rem; color: #f59e0b; margin-left: 1.35rem; }}
   </style>
 </head>
 <body>
@@ -165,6 +221,15 @@ async def handle_index(request: web.Request) -> web.Response:
           Get one from: Home Assistant → Profile → Long-Lived Access Tokens → Create Token
         </small>
       </div>
+
+      <details>
+        <summary>Beta features</summary>
+        {flag_rows}
+        <p style="font-size:.75rem;color:#64748b;margin-top:.75rem;">
+          Changes take effect after the server restarts (stop &amp; start the app).
+        </p>
+      </details>
+
       <button type="submit">Save &amp; Restart</button>
     </form>
 
@@ -198,9 +263,17 @@ async def handle_save(request: web.Request) -> web.Response:
     if not ha_url:
         raise web.HTTPBadRequest(text="ha_url is required")
 
-    _write_env({"HOMEASSISTANT_URL": ha_url, "HOMEASSISTANT_TOKEN": token})
+    values: dict[str, str] = {
+        "HOMEASSISTANT_URL": ha_url,
+        "HOMEASSISTANT_TOKEN": token,
+    }
 
-    # Redirect back to index so the status badge refreshes
+    # Write feature flags — unchecked boxes send nothing, so default to false
+    for env_var, _, _ in FEATURE_FLAGS:
+        values[env_var] = "true" if data.get(env_var) == "true" else "false"
+
+    _write_env(values)
+
     raise web.HTTPSeeOther(location="/")
 
 
