@@ -27,4 +27,6 @@ services:
       MCP_PORT: "8087"
     volumes:
       - ${APP_DATA_DIR}/data:/home/mcpuser/.ha-mcp
-    command: ["fastmcp", "run", "fastmcp-http.json"]
+    # fastmcp-http.json hardcodes port 8086 and ignores MCP_PORT, so use the
+    # ha-mcp-web entrypoint directly which respects MCP_PORT=8087
+    command: ["ha-mcp-web"]

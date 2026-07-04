@@ -2,7 +2,7 @@ manifestVersion: 1
 id: ha-mcp-server
 category: ai
 name: Home Assistant MCP Server
-version: "7.9.1"
+version: "7.9.2"
 tagline: Connect AI assistants to your Home Assistant via MCP
 description: >-
   The Unofficial and Awesome Home Assistant MCP Server — a comprehensive Model
@@ -42,9 +42,12 @@ description: >-
   5. Once connected, your MCP endpoint is http://umbrel.local:8086/mcp —
   point Claude Desktop, Claude Code, or any MCP-compatible client at that URL
 releaseNotes: >-
+  - Fixed: MCP server now correctly listens on its internal port (ha-mcp-web
+  entrypoint instead of fastmcp-http.json which hardcoded port 8086)
+
   - Fixed: HA URL no longer resets to default on every app restart
 
-  - Fixed: MCP proxy error handling (no more 500 on initialize)
+  - Fixed: MCP proxy error handling
 
   - Added: version display in the setup UI footer
 
