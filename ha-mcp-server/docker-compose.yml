@@ -9,7 +9,7 @@ services:
       PROXY_AUTH_ADD: "false"
 
   ui:
-    image: ghcr.io/mkeller0815/ha-mcp-setup-ui:latest@sha256:40313436ca66c065be8801c96b3fd56d7bff3c674fa32780e9e8c5ffede4caf9
+    image: ghcr.io/mkeller0815/ha-mcp-setup-ui:latest@sha256:645cf7597c39c7ea25e120dde535f682ffef0b72e91068d8236b9500e8fe47ca
     restart: on-failure
     environment:
       HA_MCP_ENV_FILE: /data/.env
