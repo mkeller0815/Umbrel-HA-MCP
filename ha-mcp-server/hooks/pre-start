@@ -33,9 +33,10 @@ fi
 TAILSCALE_ENABLED=$(grep -s "^TAILSCALE_SERVE_ENABLED=" "${ENV_FILE}" | cut -d= -f2-)
 
 if docker inspect tailscale_web_1 --format '{{.State.Running}}' 2>/dev/null | grep -q true; then
-    # Always capture the tailnet hostname so the UI can show it regardless of toggle state.
+    # Use CertDomains — the top-level array always contains exactly the self hostname.
+    # DNSName appears in every peer entry so grep on the full JSON is unreliable.
     TAILNET_HOST=$(docker exec tailscale_web_1 tailscale status --self --json 2>/dev/null \
-        | grep -o '"DNSName":"[^"]*"' | head -1 | cut -d'"' -f4 | sed 's/\.$//')
+        | grep -o '"CertDomains":\["[^"]*"' | grep -o '"[^"]*"$' | tr -d '"')
 
     if [[ -n "${TAILNET_HOST}" ]]; then
         if grep -q "^TAILSCALE_HOSTNAME=" "${ENV_FILE}" 2>/dev/null; then

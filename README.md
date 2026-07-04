@@ -127,6 +127,17 @@ AI client (remote, optional)
   localhost:8086  →  setup-ui container
 ```
 
+## Remote access
+
+By default the MCP endpoint is only accessible on your local network (`http://umbrel.local:8086/mcp`). Several options exist for remote access:
+
+| Option | Encrypted | Complexity | Notes |
+|---|---|---|---|
+| **Tailscale** | ✅ HTTPS | Low | Recommended — auto-cert, fast, opt-in toggle in setup UI |
+| **WireGuard** | ✅ VPN tunnel | Low | Umbrel WireGuard app; HTTP URL but tunnel encrypts traffic |
+| **Cloudflare Tunnel** | ✅ HTTPS | Medium | Free, no open ports; requires Cloudflare account |
+| **Tor / Onion** | ✅ Tor encryption | High | Built into Umbrel but too slow and complex for MCP use |
+
 ## Remote access via Tailscale (HTTPS)
 
 If the [Tailscale app](https://umbrel.com/umbrel-apps/tailscale) is installed on your Umbrel, you can enable a secure HTTPS endpoint reachable from anywhere on your tailnet — no port forwarding required.
@@ -134,9 +145,10 @@ If the [Tailscale app](https://umbrel.com/umbrel-apps/tailscale) is installed on
 ### Setup
 
 1. Install the **Tailscale** app on Umbrel and connect it to your tailnet
-2. Open the HA MCP Server setup UI
-3. Expand **Tailscale HTTPS access** and check **Enable Tailscale HTTPS endpoint**
-4. Click **Save & Restart**, then stop and start the app in Umbrel
+2. In the [Tailscale admin console](https://login.tailscale.com/admin/machines), find your Umbrel machine, click **Edit route settings** (or the **⋮** menu) and enable **HTTPS certificates** (also called "Serve") for the machine
+3. Open the HA MCP Server setup UI
+4. Expand **Tailscale HTTPS access** and check **Enable Tailscale HTTPS endpoint**
+5. Click **Save & Restart**, then stop and start the app in Umbrel
 
 On the next start the `pre-start` hook automatically runs `tailscale serve` inside the Tailscale container, which proxies `https://<your-umbrel-hostname>.<tailnet>.ts.net` → `http://localhost:8086`. The setup UI will show the HTTPS MCP endpoint in purple once configured:
 
@@ -146,12 +158,29 @@ https://umbrel.<tailnet>.ts.net/mcp
 
 Use this HTTPS URL in your AI client. With the Tailscale endpoint you can drop `--allow-http` from the `mcp-remote` args in Claude Desktop.
 
+### Troubleshooting
+
+**HTTPS endpoint not showing in the setup UI after enabling the toggle:**
+- Make sure HTTPS certificates are enabled for your Umbrel machine in the Tailscale admin console — `tailscale serve` silently fails without it
+- Verify `tailscale serve` works manually: `sudo docker exec tailscale_web_1 tailscale serve --bg http://localhost:8086`
+- Stop and start the app again so the pre-start hook re-runs after fixing the Tailscale settings
+
 ### Notes
 
 - **No hard dependency**: if Tailscale is not installed the app works normally over HTTP on the local network
 - **Opt-in**: Tailscale Serve is only configured when the toggle is enabled; disabling it removes the Serve config on next restart
 - The Tailscale app uses host networking on Umbrel, so `tailscale serve` on port 8086 reaches the MCP server directly on `localhost`
 - The HTTPS certificate is issued automatically by Tailscale via Let's Encrypt — no manual cert management needed
+
+## Remote access via WireGuard
+
+Umbrel includes a [WireGuard app](https://umbrel.com/umbrel-apps/wireguard) that creates a VPN tunnel to your home network. Once connected, the MCP endpoint is reachable at your Umbrel's WireGuard IP — traffic is encrypted by the VPN tunnel even though the URL uses HTTP.
+
+1. Install the **WireGuard** app on Umbrel and add a client device
+2. Connect your device to the VPN
+3. Use `http://<umbrel-wireguard-ip>:8086/mcp` as the MCP endpoint
+
+> **Note:** WireGuard support in the setup UI (auto-detecting the VPN IP) is planned but not yet implemented. See `TODO.md`.
 
 ## Enabling beta features (YAML editing, filesystem tools, etc.)
 
