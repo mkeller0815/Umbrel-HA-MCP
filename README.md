@@ -102,6 +102,32 @@ Browser / AI client
   └── /mcp/*         → ha-mcp container :8087
 ```
 
+## Remote access via Tailscale (HTTPS)
+
+If the [Tailscale app](https://umbrel.com/umbrel-apps/tailscale) is installed on your Umbrel, you can enable a secure HTTPS endpoint reachable from anywhere on your tailnet — no port forwarding required.
+
+### Setup
+
+1. Install the **Tailscale** app on Umbrel and connect it to your tailnet
+2. Open the HA MCP Server setup UI
+3. Expand **Tailscale HTTPS access** and check **Enable Tailscale HTTPS endpoint**
+4. Click **Save & Restart**, then stop and start the app in Umbrel
+
+On the next start the `pre-start` hook automatically runs `tailscale serve` inside the Tailscale container, which proxies `https://<your-umbrel-hostname>.<tailnet>.ts.net` → `http://localhost:8086`. The setup UI will show the HTTPS MCP endpoint in purple once configured:
+
+```
+https://umbrel.<tailnet>.ts.net/mcp
+```
+
+Use this URL in your AI client instead of the local LAN URL for remote access.
+
+### Notes
+
+- **No hard dependency**: if Tailscale is not installed the app works normally over HTTP on the local network
+- **Opt-in**: Tailscale Serve is only configured when the toggle is enabled; disabling it removes the Serve config on next restart
+- The Tailscale app uses host networking on Umbrel, so `tailscale serve` on port 8086 reaches the MCP server directly on `localhost`
+- The HTTPS certificate is issued automatically by Tailscale via Let's Encrypt — no manual cert management needed
+
 ## Enabling beta features (YAML editing, filesystem tools, etc.)
 
 Ha-mcp ships with several powerful but potentially dangerous tools disabled by default. You can enable them from the setup UI:
