@@ -22,7 +22,7 @@ HOMEASSISTANT_URL=http://${DEVICE_DOMAIN_NAME:-umbrel.local}:8123
 # Get one from: Home Assistant → Profile → Long-Lived Access Tokens → Create Token
 HOMEASSISTANT_TOKEN=
 EOF
-    echo "ha-mcp: created ${ENV_FILE} — add your HOMEASSISTANT_TOKEN and restart the app."
+    echo "ha-mcp: created ${ENV_FILE} — open the app to configure your token."
 else
     # File exists — update only the URL line if the domain changed, leave the token untouched.
     if [[ -n "${DEVICE_DOMAIN_NAME:-}" ]]; then

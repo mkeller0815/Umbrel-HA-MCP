@@ -3,19 +3,27 @@ version: "3.7"
 services:
   app_proxy:
     environment:
-      APP_HOST: ha-mcp-server_server_1
+      APP_HOST: ha-mcp-server_ui_1
       APP_PORT: 8086
-      # MCP clients connect without Umbrel auth cookies
+      # MCP clients and the setup UI both connect without Umbrel auth cookies
       PROXY_AUTH_ADD: "false"
+
+  ui:
+    image: ghcr.io/mkeller0815/ha-mcp-setup-ui:latest
+    restart: on-failure
+    environment:
+      HA_MCP_ENV_FILE: /data/.env
+      HA_MCP_INTERNAL_URL: http://ha-mcp-server_server_1:8087
+      LISTEN_PORT: "8086"
+    volumes:
+      - ${APP_DATA_DIR}/data:/data
 
   server:
     image: ghcr.io/homeassistant-ai/ha-mcp:7.9.0@sha256:eb7cf2349e4ad99d8a0a55447e8c67a942d35602d9cb455649ff0063de6dfa09
     restart: on-failure
     environment:
-      # Point ha-mcp at the .env file written by the pre-start hook
       HAMCP_ENV_FILE: /home/mcpuser/.ha-mcp/.env
+      MCP_PORT: "8087"
     volumes:
       - ${APP_DATA_DIR}/data:/home/mcpuser/.ha-mcp
     command: ["fastmcp", "run", "fastmcp-http.json"]
-    ports:
-      - "8086:8086"

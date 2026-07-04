@@ -29,22 +29,18 @@ description: >-
 
   **Getting Started:**
 
-  1. Make sure the Home Assistant app is installed on Umbrel (it is a
-  required dependency)
+  1. Make sure the Home Assistant app is installed on Umbrel (required
+  dependency)
 
-  2. Install and start this app — it auto-connects to your Umbrel Home
-  Assistant at http://umbrel.local:8123
+  2. Install and start this app
 
-  3. Get a Home Assistant long-lived access token: HA profile → Long-Lived
-  Access Tokens → Create Token
+  3. Open the app — a setup page will appear
 
-  4. Add the token to the config file at app-data/ha-mcp-server/data/.env
-  on your Umbrel: HOMEASSISTANT_TOKEN=your_token_here
+  4. Paste your Home Assistant long-lived access token (HA profile →
+  Long-Lived Access Tokens → Create Token) and click Save
 
-  5. Restart this app — your MCP endpoint is http://umbrel.local:8086/mcp
-
-  6. Point Claude Desktop, Claude Code, or any MCP-compatible client at that
-  URL
+  5. Once connected, your MCP endpoint is http://umbrel.local:8086/mcp —
+  point Claude Desktop, Claude Code, or any MCP-compatible client at that URL
 releaseNotes: >-
   Initial release packaging ha-mcp v7.9.0 for Umbrel.
 
