@@ -14,6 +14,8 @@ from aiohttp import web
 ENV_FILE = Path(os.environ.get("HA_MCP_ENV_FILE", "/data/.env"))
 HA_MCP_URL = os.environ.get("HA_MCP_INTERNAL_URL", "http://localhost:8087")
 LISTEN_PORT = int(os.environ.get("LISTEN_PORT", "8086"))
+UI_VERSION = os.environ.get("UI_VERSION", "dev")
+HA_MCP_VERSION = os.environ.get("HA_MCP_VERSION", "")
 
 
 def _read_env() -> dict[str, str]:
@@ -171,6 +173,11 @@ async def handle_index(request: web.Request) -> web.Response:
       <p>MCP endpoint (use this URL in your AI client)</p>
       <code>{mcp_url}</code>
     </div>'''}
+
+    <div style="margin-top:1.5rem;text-align:center;font-size:.72rem;color:#334155;">
+      setup-ui {UI_VERSION}
+      {"&nbsp;·&nbsp;ha-mcp " + HA_MCP_VERSION if HA_MCP_VERSION else ""}
+    </div>
   </div>
 </body>
 </html>"""

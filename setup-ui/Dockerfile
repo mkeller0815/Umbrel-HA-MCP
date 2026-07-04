@@ -9,6 +9,9 @@ ENV HA_MCP_ENV_FILE=/data/.env
 ENV HA_MCP_INTERNAL_URL=http://localhost:8087
 ENV LISTEN_PORT=8086
 
+ARG UI_VERSION=dev
+ENV UI_VERSION=${UI_VERSION}
+
 EXPOSE 8086
 
 CMD ["python", "server.py"]
