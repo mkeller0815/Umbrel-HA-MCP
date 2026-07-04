@@ -29,16 +29,16 @@ services:
     volumes:
       - ${APP_DATA_DIR}/data:/home/mcpuser/.ha-mcp
     # Wait for credentials to be saved via the setup UI before starting ha-mcp.
-    # Unsets any empty env vars so load_dotenv can populate them cleanly from .env.
+    # $$ escapes prevent Docker Compose from expanding shell variables.
     command:
       - sh
       - -c
       - |
         ENV_FILE=/home/mcpuser/.ha-mcp/.env
         while true; do
-          token=$(grep -s "^HOMEASSISTANT_TOKEN=" "$ENV_FILE" | cut -d= -f2-)
-          url=$(grep -s "^HOMEASSISTANT_URL=" "$ENV_FILE" | cut -d= -f2-)
-          if [ -n "$token" ] && [ -n "$url" ]; then
+          token=$$(grep -s "^HOMEASSISTANT_TOKEN=" "$$ENV_FILE" | cut -d= -f2-)
+          url=$$(grep -s "^HOMEASSISTANT_URL=" "$$ENV_FILE" | cut -d= -f2-)
+          if [ -n "$$token" ] && [ -n "$$url" ]; then
             unset HOMEASSISTANT_URL HOMEASSISTANT_TOKEN
             exec ha-mcp-web
           fi
