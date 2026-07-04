@@ -102,6 +102,31 @@ Browser / AI client
   └── /mcp/*         → ha-mcp container :8087
 ```
 
+## Enabling beta features (YAML editing, filesystem tools, etc.)
+
+Ha-mcp ships with several powerful but potentially dangerous tools disabled by default. You can enable them from the setup UI:
+
+1. Open the app from your Umbrel home screen
+2. Expand the **Beta features** section
+3. Check **Enable beta features (master switch)** and any sub-features you want
+4. Click **Save & Restart**
+5. Stop and start the app in Umbrel so the server restarts with the new settings
+
+The master switch must be on for any sub-feature to work. Available sub-features:
+
+| Feature | What it does |
+|---|---|
+| YAML config editing | Lets the AI add, replace, or remove keys in `configuration.yaml` and `packages/*.yaml` |
+| Filesystem tools | Gives the AI direct read/write access to your HA filesystem |
+| Custom component integration | Lets the AI install and manage custom components |
+| Code mode | Lets the AI execute sandboxed Python scripts in Home Assistant |
+
+> **Warning:** These tools can permanently damage your Home Assistant installation. Take a backup before enabling them.
+
+### Tools not showing up after enabling beta features
+
+If you enable beta features but your AI client does not see the new tools (e.g. Claude says it cannot find `ha_config_set_yaml`), the client has a cached copy of the tool list from before the restart. **Restart your AI client** (Claude Desktop, etc.) to force it to re-fetch the tool catalog from the MCP server.
+
 ## Updating
 
 When a new version of ha-mcp is released, update the image tag and digest in `ha-mcp-server/docker-compose.yml` and bump `version` in `ha-mcp-server/umbrel-app.yml`. Umbrel will offer the update to users.
