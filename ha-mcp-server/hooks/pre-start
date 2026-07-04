@@ -28,26 +28,33 @@ EOF
     echo "ha-mcp: created ${ENV_FILE} — open the app to configure your token."
 fi
 
-# Configure Tailscale Serve if the Tailscale Umbrel app is running.
-# This proxies https://<tailnet-hostname>/  →  http://localhost:8086
-# so the MCP endpoint is reachable at https://<tailnet-hostname>/mcp from
-# anywhere on the tailnet with a valid TLS certificate.
-# tailscale serve is idempotent — safe to run on every app start.
+# Tailscale Serve — only runs if the Tailscale Umbrel app is present and the
+# user has enabled the option in the setup UI (TAILSCALE_SERVE_ENABLED=true).
+TAILSCALE_ENABLED=$(grep -s "^TAILSCALE_SERVE_ENABLED=" "${ENV_FILE}" | cut -d= -f2-)
+
 if docker inspect tailscale_web_1 --format '{{.State.Running}}' 2>/dev/null | grep -q true; then
+    # Always capture the tailnet hostname so the UI can show it regardless of toggle state.
     TAILNET_HOST=$(docker exec tailscale_web_1 tailscale status --self --json 2>/dev/null \
         | grep -o '"DNSName":"[^"]*"' | head -1 | cut -d'"' -f4 | sed 's/\.$//')
-    if docker exec tailscale_web_1 tailscale serve --bg http://localhost:8086 2>/dev/null; then
-        echo "ha-mcp: Tailscale Serve configured — MCP endpoint: https://${TAILNET_HOST}/mcp"
-    else
-        echo "ha-mcp: Tailscale Serve setup failed (non-fatal, LAN access still works)."
-    fi
-    # Persist tailnet hostname to .env so the setup UI can display the HTTPS URL.
+
     if [[ -n "${TAILNET_HOST}" ]]; then
         if grep -q "^TAILSCALE_HOSTNAME=" "${ENV_FILE}" 2>/dev/null; then
             sed -i "s|^TAILSCALE_HOSTNAME=.*|TAILSCALE_HOSTNAME=${TAILNET_HOST}|" "${ENV_FILE}"
         else
             echo "TAILSCALE_HOSTNAME=${TAILNET_HOST}" >> "${ENV_FILE}"
         fi
+    fi
+
+    if [[ "${TAILSCALE_ENABLED}" == "true" ]]; then
+        if docker exec tailscale_web_1 tailscale serve --bg http://localhost:8086 2>/dev/null; then
+            echo "ha-mcp: Tailscale Serve enabled — https://${TAILNET_HOST}/mcp"
+        else
+            echo "ha-mcp: Tailscale Serve setup failed (non-fatal, LAN access still works)."
+        fi
+    else
+        # User disabled the toggle — remove Serve config if it was previously set.
+        docker exec tailscale_web_1 tailscale serve reset 2>/dev/null \
+            && echo "ha-mcp: Tailscale Serve disabled." || true
     fi
 else
     echo "ha-mcp: Tailscale app not running — skipping Tailscale Serve setup."

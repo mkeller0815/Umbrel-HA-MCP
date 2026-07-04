@@ -110,12 +110,13 @@ async def handle_index(request: web.Request) -> web.Response:
     token_set = bool(token)
 
     tailscale_host = env.get("TAILSCALE_HOSTNAME", "")
+    tailscale_enabled = env.get("TAILSCALE_SERVE_ENABLED", "").lower() == "true"
     connected, status_msg = await _check_ha_connection(ha_url, token)
 
     status_color = "#22c55e" if connected else ("#f59e0b" if token_set else "#ef4444")
     status_icon = "✓" if connected else ("⚠" if token_set else "✗")
     mcp_url = request.url.origin().with_path("/mcp")
-    tailscale_mcp_url = f"https://{tailscale_host}/mcp" if tailscale_host else ""
+    tailscale_mcp_url = f"https://{tailscale_host}/mcp" if (tailscale_host and tailscale_enabled) else ""
 
     # Build feature flag checkboxes
     flag_rows = ""
@@ -225,6 +226,24 @@ async def handle_index(request: web.Request) -> web.Response:
       </div>
 
       <details>
+        <summary>Tailscale HTTPS access</summary>
+        <div class="flag-row" style="margin-top:.5rem;">
+          <label class="flag-label">
+            <input type="checkbox" name="TAILSCALE_SERVE_ENABLED" value="true" {"checked" if tailscale_enabled else ""}>
+            <span>Enable Tailscale HTTPS endpoint</span>
+          </label>
+          <div class="flag-warn" style="color:#818cf8;">
+            Requires the Tailscale app installed on Umbrel. Configures
+            <code style="font-size:.75rem;">tailscale serve</code> on app restart so the MCP
+            endpoint is reachable over HTTPS from anywhere on your tailnet.
+          </div>
+        </div>
+        <p style="font-size:.75rem;color:#64748b;margin-top:.75rem;">
+          Changes take effect after the app is stopped and started.
+        </p>
+      </details>
+
+      <details>
         <summary>Beta features</summary>
         {flag_rows}
         <p style="font-size:.75rem;color:#64748b;margin-top:.75rem;">
@@ -273,6 +292,7 @@ async def handle_save(request: web.Request) -> web.Response:
     values: dict[str, str] = {
         "HOMEASSISTANT_URL": ha_url,
         "HOMEASSISTANT_TOKEN": token,
+        "TAILSCALE_SERVE_ENABLED": "true" if data.get("TAILSCALE_SERVE_ENABLED") == "true" else "false",
     }
 
     # Write feature flags — unchecked boxes send nothing, so default to false
