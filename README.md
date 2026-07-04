@@ -1,0 +1,135 @@
+# Home Assistant MCP Server for Umbrel
+
+A community app store package that brings the [ha-mcp](https://github.com/homeassistant-ai/ha-mcp) Model Context Protocol server to [Umbrel](https://umbrel.com). Once installed, AI assistants like Claude, ChatGPT, and Gemini can control your smart home devices, query states, manage automations, and execute services — all through natural language.
+
+## What is MCP?
+
+The [Model Context Protocol](https://modelcontextprotocol.io) is an open standard that lets AI assistants talk to external tools and services. Ha-mcp implements MCP on top of the Home Assistant API, exposing 85+ tools that cover everything from switching a light to editing automations.
+
+## Prerequisites
+
+- [Umbrel](https://umbrel.com) running on a Raspberry Pi 4/5 or a PC
+- The **Home Assistant** app installed and running on the same Umbrel (it is a required dependency)
+- A Home Assistant long-lived access token (created inside Home Assistant)
+
+## Installation
+
+### 1. Add this community app store to Umbrel
+
+Open your Umbrel dashboard, go to **App Store → ⋮ (menu) → Community App Stores**, and add:
+
+```
+https://github.com/mkeller0815/Umbrel-HA-MCP
+```
+
+### 2. Install the app
+
+Find **Home Assistant MCP Server** in the app store and click **Install**. Umbrel will install the Home Assistant app first if it is not already running.
+
+### 3. Create a Home Assistant access token
+
+In Home Assistant, go to your **Profile → Long-Lived Access Tokens → Create Token**. Give it a name (e.g. "Umbrel MCP") and copy the token — you only see it once.
+
+### 4. Configure the connection
+
+Open the app from your Umbrel home screen. A setup page appears with the Home Assistant URL already pre-filled to `http://umbrel.local:8123`. Paste your token into the token field and click **Save**.
+
+The status badge will turn green once the connection is verified.
+
+### 5. Connect your AI client
+
+Your MCP endpoint is:
+
+```
+http://umbrel.local:8086/mcp
+```
+
+Use this URL in your AI client of choice. Examples below.
+
+## Connecting AI Clients
+
+### Claude Desktop
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+
+```json
+{
+  "mcpServers": {
+    "home-assistant": {
+      "command": "uvx",
+      "args": ["mcp-proxy", "--transport", "streamablehttp", "http://umbrel.local:8086/mcp"]
+    }
+  }
+}
+```
+
+This requires [uv](https://docs.astral.sh/uv/) to be installed (`curl -LsSf https://astral.sh/uv/install.sh | sh`). Restart Claude Desktop after saving.
+
+### Claude Code
+
+```bash
+claude mcp add-json home-assistant '{
+  "url": "http://umbrel.local:8086/mcp",
+  "type": "http"
+}'
+```
+
+### Other MCP clients
+
+Any client that supports the streamable-HTTP MCP transport can connect directly to `http://umbrel.local:8086/mcp`. For clients that require stdio, use `mcp-proxy` as shown in the Claude Desktop example above.
+
+Replace `umbrel.local` with your Umbrel's IP address if the hostname does not resolve on your network.
+
+## How it works
+
+The app runs two containers:
+
+| Container | Role |
+|---|---|
+| `ui` | Setup page at `/` + reverse proxy for `/mcp/*` |
+| `server` | Ha-mcp in HTTP mode, internal port 8087 |
+
+The setup UI writes your Home Assistant URL and token to `app-data/ha-mcp-server/data/.env`. Ha-mcp reads that file on startup. The MCP endpoint at `/mcp` is proxied transparently through the UI container, so clients always connect to port 8086.
+
+```
+Browser / AI client
+       │
+  Umbrel app_proxy :8086
+       │
+  setup-ui container :8086
+  ├── GET /          → setup form
+  ├── POST /api/save → writes .env
+  └── /mcp/*         → ha-mcp container :8087
+```
+
+## Updating
+
+When a new version of ha-mcp is released, update the image tag and digest in `ha-mcp-server/docker-compose.yml` and bump `version` in `ha-mcp-server/umbrel-app.yml`. Umbrel will offer the update to users.
+
+When the setup-ui container changes, push to this repo and GitHub Actions rebuilds `ghcr.io/mkeller0815/ha-mcp-setup-ui` for both `linux/amd64` and `linux/arm64`. Update the digest in `docker-compose.yml` after the build completes.
+
+## Repository structure
+
+```
+umbrel-app-store.yml          # Community app store manifest
+ha-mcp-server/
+  umbrel-app.yml              # Umbrel app manifest
+  docker-compose.yml          # Service definitions
+  hooks/pre-start             # Writes data/.env with HA URL on first start
+  data/.gitkeep               # Ensures persistence directory exists
+setup-ui/
+  server.py                   # Setup UI + proxy server (Python/aiohttp)
+  Dockerfile                  # Builds ghcr.io/mkeller0815/ha-mcp-setup-ui
+.github/workflows/
+  build-setup-ui.yml          # Builds and publishes the setup-ui image
+```
+
+## Credits
+
+- [ha-mcp](https://github.com/homeassistant-ai/ha-mcp) by homeassistant-ai — the MCP server this package wraps
+- [Umbrel](https://umbrel.com) — the personal server OS
+- [FastMCP](https://github.com/jlowin/fastmcp) — the MCP framework ha-mcp is built on
+
+## License
+
+MIT
