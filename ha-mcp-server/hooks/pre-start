@@ -6,6 +6,9 @@ DATA_DIR="${APP_DIR}/data"
 ENV_FILE="${DATA_DIR}/.env"
 
 mkdir -p "${DATA_DIR}"
+# mcpuser (UID 1000) inside the server container needs write access to this
+# directory to save feature_flags.json and other runtime files.
+chown -R 1000:1000 "${DATA_DIR}" 2>/dev/null || true
 
 # Write .env with the HA URL pre-filled from Umbrel's device domain.
 # Preserves any existing HOMEASSISTANT_TOKEN the user already set.
