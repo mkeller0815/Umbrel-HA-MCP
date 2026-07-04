@@ -23,9 +23,4 @@ HOMEASSISTANT_URL=http://${DEVICE_DOMAIN_NAME:-umbrel.local}:8123
 HOMEASSISTANT_TOKEN=
 EOF
     echo "ha-mcp: created ${ENV_FILE} — open the app to configure your token."
-else
-    # File exists — update only the URL line if the domain changed, leave the token untouched.
-    if [[ -n "${DEVICE_DOMAIN_NAME:-}" ]]; then
-        sed -i "s|^HOMEASSISTANT_URL=http://.*:8123|HOMEASSISTANT_URL=http://${DEVICE_DOMAIN_NAME}:8123|" "${ENV_FILE}"
-    fi
 fi
