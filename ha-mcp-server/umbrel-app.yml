@@ -1,0 +1,60 @@
+manifestVersion: 1
+id: ha-mcp-server
+category: ai
+name: Home Assistant MCP Server
+version: "7.9.0"
+tagline: Connect AI assistants to your Home Assistant via MCP
+description: >-
+  The Unofficial and Awesome Home Assistant MCP Server — a comprehensive Model
+  Context Protocol (MCP) server that lets AI assistants like Claude, ChatGPT,
+  and Gemini interact with your Home Assistant via the Model Context Protocol.
+
+
+  Using natural language, control smart home devices, query entity states,
+  execute services, and manage automations.
+
+
+  **What you can do:**
+
+  - Control lights, switches, climate, and all other devices
+
+  - Query entity states and sensor data
+
+  - Create and trigger automations
+
+  - Execute Home Assistant services
+
+  - Browse your full device and entity registry
+
+
+  **Getting Started:**
+
+  1. Install and start this app
+
+  2. Get a Home Assistant long-lived access token: HA profile → Long-Lived
+  Access Tokens → Create Token
+
+  3. Open the app and enter your Home Assistant URL and token
+
+  4. Your MCP server is available at http://umbrel.local:8086/mcp — point
+  Claude Desktop, Claude Code, or any MCP-compatible AI client at that URL
+releaseNotes: >-
+  Initial release packaging ha-mcp v7.9.0 for Umbrel.
+
+developer: homeassistant-ai
+website: https://homeassistant-ai.github.io/ha-mcp/
+dependencies: []
+repo: https://github.com/homeassistant-ai/ha-mcp
+support: https://github.com/homeassistant-ai/ha-mcp/issues
+
+port: 8086
+gallery: []
+path: ""
+
+defaultUsername: ""
+defaultPassword: ""
+
+icon: https://raw.githubusercontent.com/homeassistant-ai/ha-mcp/master/docs/img/ha-mcp-logo.png
+
+submitter: Mario Keller
+submission: https://github.com/mariokeller/umbrel-ha-mcp
