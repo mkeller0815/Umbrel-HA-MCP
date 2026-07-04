@@ -2,7 +2,7 @@ manifestVersion: 1
 id: ha-mcp-server
 category: ai
 name: Home Assistant MCP Server
-version: "7.9.8"
+version: "7.9.9"
 tagline: Connect AI assistants to your Home Assistant via MCP
 description: >-
   The Unofficial and Awesome Home Assistant MCP Server — a comprehensive Model
