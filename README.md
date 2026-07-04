@@ -1,5 +1,7 @@
 # Home Assistant MCP Server for Umbrel
 
+<img src="ha-mcp-server/icon.png" alt="Home Assistant MCP Server" width="128">
+
 A community app store package that brings the [ha-mcp](https://github.com/homeassistant-ai/ha-mcp) Model Context Protocol server to [Umbrel](https://umbrel.com). Once installed, AI assistants like Claude, ChatGPT, and Gemini can control your smart home devices, query states, manage automations, and execute services — all through natural language.
 
 ## What is MCP?

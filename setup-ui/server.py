@@ -226,7 +226,7 @@ async def handle_index(request: web.Request) -> web.Response:
 <body>
   <div class="card">
     <div class="logo">
-      <img src="https://raw.githubusercontent.com/homeassistant-ai/ha-mcp/master/docs/img/ha-mcp-logo.png" alt="">
+      <img src="https://raw.githubusercontent.com/mkeller0815/Umbrel-HA-MCP/main/ha-mcp-server/icon.png" alt="">
       <h1>Home Assistant MCP Server</h1>
     </div>
 
