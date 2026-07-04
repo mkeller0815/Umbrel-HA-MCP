@@ -118,6 +118,29 @@ async def handle_index(request: web.Request) -> web.Response:
     mcp_url = request.url.origin().with_path("/mcp")
     tailscale_mcp_url = f"https://{tailscale_host}/mcp" if (tailscale_host and tailscale_enabled) else ""
 
+    # Build the connected-state block (endpoint boxes + settings link)
+    if connected:
+        tailscale_box = ""
+        if tailscale_mcp_url:
+            tailscale_box = f"""
+    <div class="mcp-box" style="margin-top:.75rem;border-color:#6366f144;">
+      <p style="color:#818cf8;">MCP endpoint — Tailscale (HTTPS, remote access)</p>
+      <code style="color:#a5b4fc;">{tailscale_mcp_url}</code>
+    </div>"""
+        connected_block = f"""
+    <hr class="divider">
+    <div class="mcp-box">
+      <p>MCP endpoint — local network</p>
+      <code>{mcp_url}</code>
+    </div>{tailscale_box}
+    <a href="/mcp/settings" style="
+      display:block; margin-top:1rem; padding:.6rem 1rem;
+      background:#1e3a5f; border:1px solid #334155; border-radius:.5rem;
+      color:#7dd3fc; font-size:.85rem; text-decoration:none; text-align:center;
+    ">⚙ MCP Server Settings</a>"""
+    else:
+        connected_block = ""
+
     # Build feature flag checkboxes
     flag_rows = ""
     for env_var, label, warning in FEATURE_FLAGS:
@@ -254,22 +277,7 @@ async def handle_index(request: web.Request) -> web.Response:
       <button type="submit">Save &amp; Restart</button>
     </form>
 
-    {"" if not connected else f'''
-    <hr class="divider">
-    <div class="mcp-box">
-      <p>MCP endpoint — local network</p>
-      <code>{mcp_url}</code>
-    </div>
-    {"" if not tailscale_mcp_url else f\'\'\'
-    <div class="mcp-box" style="margin-top:.75rem;border-color:#6366f144;">
-      <p style="color:#818cf8;">MCP endpoint — Tailscale (HTTPS, remote access)</p>
-      <code style="color:#a5b4fc;">{tailscale_mcp_url}</code>
-    </div>\'\'\'}
-    <a href="/mcp/settings" style="
-      display:block; margin-top:1rem; padding:.6rem 1rem;
-      background:#1e3a5f; border:1px solid #334155; border-radius:.5rem;
-      color:#7dd3fc; font-size:.85rem; text-decoration:none; text-align:center;
-    ">⚙ MCP Server Settings</a>'''}
+    {connected_block}
 
     <div style="margin-top:1.5rem;text-align:center;font-size:.8rem;color:#64748b;">
       {"App v" + APP_VERSION + "&nbsp;·&nbsp;" if APP_VERSION else ""}ha-mcp {HA_MCP_VERSION or "unknown"}&nbsp;·&nbsp;setup-ui {UI_VERSION}
