@@ -50,20 +50,37 @@ Use this URL in your AI client of choice. Examples below.
 
 ### Claude Desktop
 
+Claude Desktop does not support HTTP MCP transports natively and requires a local stdio proxy. The easiest way is `mcp-remote` via `npx` (requires Node.js):
+
 Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
 
 ```json
 {
   "mcpServers": {
     "home-assistant": {
-      "command": "uvx",
-      "args": ["mcp-proxy", "--transport", "streamablehttp", "http://umbrel.local:8086/mcp"]
+      "command": "npx",
+      "args": ["mcp-remote", "http://umbrel.local:8086/mcp", "--allow-http"]
     }
   }
 }
 ```
 
-This requires [uv](https://docs.astral.sh/uv/) to be installed (`curl -LsSf https://astral.sh/uv/install.sh | sh`). Restart Claude Desktop after saving.
+On macOS with Node.js installed via Homebrew, use the full path to `npx`:
+
+```json
+{
+  "mcpServers": {
+    "home-assistant": {
+      "command": "/opt/homebrew/bin/npx",
+      "args": ["mcp-remote", "http://umbrel.local:8086/mcp", "--allow-http"]
+    }
+  }
+}
+```
+
+Restart Claude Desktop after saving. If new tools don't appear after enabling features, restart Claude Desktop again to refresh the tool list.
+
+> **Note:** `--allow-http` is required because `mcp-remote` blocks non-HTTPS URLs by default. If you use the [Tailscale HTTPS endpoint](#remote-access-via-tailscale-https), omit `--allow-http` and use the `https://` URL instead.
 
 ### Claude Code
 
@@ -76,7 +93,7 @@ claude mcp add-json home-assistant '{
 
 ### Other MCP clients
 
-Any client that supports the streamable-HTTP MCP transport can connect directly to `http://umbrel.local:8086/mcp`. For clients that require stdio, use `mcp-proxy` as shown in the Claude Desktop example above.
+Any client that supports the streamable-HTTP MCP transport can connect directly to `http://umbrel.local:8086/mcp`. For clients that require stdio, use `mcp-remote` as shown in the Claude Desktop example above.
 
 Replace `umbrel.local` with your Umbrel's IP address if the hostname does not resolve on your network.
 
@@ -89,17 +106,25 @@ The app runs two containers:
 | `ui` | Setup page at `/` + reverse proxy for `/mcp/*` |
 | `server` | Ha-mcp in HTTP mode, internal port 8087 |
 
-The setup UI writes your Home Assistant URL and token to `app-data/ha-mcp-server/data/.env`. Ha-mcp reads that file on startup. The MCP endpoint at `/mcp` is proxied transparently through the UI container, so clients always connect to port 8086.
+The setup UI writes your Home Assistant URL, token, and feature flags to `app-data/ha-mcp-server/data/.env`. Ha-mcp reads that file on startup. The MCP endpoint at `/mcp` is proxied transparently through the UI container, so clients always connect to port 8086.
 
 ```
-Browser / AI client
+Browser / AI client (local)
+       │  http://umbrel.local:8086/mcp
        │
   Umbrel app_proxy :8086
        │
   setup-ui container :8086
-  ├── GET /          → setup form
-  ├── POST /api/save → writes .env
-  └── /mcp/*         → ha-mcp container :8087
+  ├── GET /            → setup form (token, feature flags, Tailscale toggle)
+  ├── POST /api/save   → writes .env
+  └── /mcp/*           → ha-mcp container :8087
+
+AI client (remote, optional)
+       │  https://<tailnet-hostname>/mcp
+       │
+  Tailscale Serve (HTTPS, auto-cert)
+       │
+  localhost:8086  →  setup-ui container
 ```
 
 ## Remote access via Tailscale (HTTPS)
@@ -119,7 +144,7 @@ On the next start the `pre-start` hook automatically runs `tailscale serve` insi
 https://umbrel.<tailnet>.ts.net/mcp
 ```
 
-Use this URL in your AI client instead of the local LAN URL for remote access.
+Use this HTTPS URL in your AI client. With the Tailscale endpoint you can drop `--allow-http` from the `mcp-remote` args in Claude Desktop.
 
 ### Notes
 
@@ -166,13 +191,14 @@ umbrel-app-store.yml          # Community app store manifest
 ha-mcp-server/
   umbrel-app.yml              # Umbrel app manifest
   docker-compose.yml          # Service definitions
-  hooks/pre-start             # Writes data/.env with HA URL on first start
+  hooks/pre-start             # Creates .env, sets permissions, configures Tailscale Serve
   data/.gitkeep               # Ensures persistence directory exists
 setup-ui/
   server.py                   # Setup UI + proxy server (Python/aiohttp)
   Dockerfile                  # Builds ghcr.io/mkeller0815/ha-mcp-setup-ui
 .github/workflows/
-  build-setup-ui.yml          # Builds and publishes the setup-ui image
+  build-setup-ui.yml          # Builds and publishes the setup-ui image on push
+TODO.md                       # Planned features and improvements
 ```
 
 ## Credits
