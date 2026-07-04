@@ -174,7 +174,7 @@ async def handle_index(request: web.Request) -> web.Response:
       <code>{mcp_url}</code>
     </div>'''}
 
-    <div style="margin-top:1.5rem;text-align:center;font-size:.72rem;color:#334155;">
+    <div style="margin-top:1.5rem;text-align:center;font-size:.8rem;color:#64748b;">
       setup-ui {UI_VERSION}
       {"&nbsp;·&nbsp;ha-mcp " + HA_MCP_VERSION if HA_MCP_VERSION else ""}
     </div>
