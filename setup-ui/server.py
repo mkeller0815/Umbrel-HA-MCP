@@ -192,62 +192,74 @@ async def handle_save(request: web.Request) -> web.Response:
     raise web.HTTPSeeOther(location="/")
 
 
-async def handle_proxy(request: web.Request) -> web.Response:
-    """Proxy /mcp and /mcp/settings to ha-mcp."""
+_HOP_BY_HOP = frozenset(
+    ["transfer-encoding", "content-encoding", "connection",
+     "keep-alive", "proxy-authenticate", "proxy-authorization",
+     "te", "trailers", "upgrade"]
+)
+
+_SESSION: aiohttp.ClientSession | None = None
+
+
+async def _get_session() -> aiohttp.ClientSession:
+    global _SESSION
+    if _SESSION is None or _SESSION.closed:
+        _SESSION = aiohttp.ClientSession()
+    return _SESSION
+
+
+async def handle_proxy(request: web.Request) -> web.Response | web.StreamResponse:
+    """Proxy /mcp/* to ha-mcp. Streams SSE/chunked responses, buffers the rest."""
     path = request.match_info["path"]
-    target = f"{HA_MCP_URL}/{path}"
+    target = f"{HA_MCP_URL}/mcp{path}"
     if request.query_string:
         target += f"?{request.query_string}"
 
-    async with aiohttp.ClientSession() as session:
-        method = request.method
-        headers = {k: v for k, v in request.headers.items()
-                   if k.lower() not in ("host", "content-length")}
-        body = await request.read()
-        async with session.request(
-            method, target, headers=headers, data=body,
-            timeout=aiohttp.ClientTimeout(total=60),
-            allow_redirects=False,
-        ) as resp:
-            resp_headers = {k: v for k, v in resp.headers.items()
-                            if k.lower() not in ("transfer-encoding", "content-encoding")}
-            body = await resp.read()
-            return web.Response(status=resp.status, headers=resp_headers, body=body)
-
-
-async def handle_proxy_stream(request: web.Request) -> web.StreamResponse:
-    """Streaming proxy for SSE / streamable-HTTP MCP transport."""
-    path = request.match_info["path"]
-    target = f"{HA_MCP_URL}/{path}"
-    if request.query_string:
-        target += f"?{request.query_string}"
-
-    headers = {k: v for k, v in request.headers.items()
-               if k.lower() not in ("host", "content-length")}
+    req_headers = {k: v for k, v in request.headers.items()
+                   if k.lower() not in _HOP_BY_HOP and k.lower() != "host"}
     body = await request.read()
 
-    async with aiohttp.ClientSession() as session:
-        async with session.request(
-            request.method, target, headers=headers, data=body,
-            timeout=aiohttp.ClientTimeout(total=None),
+    session = await _get_session()
+    try:
+        resp = await session.request(
+            request.method, target,
+            headers=req_headers, data=body or None,
+            timeout=aiohttp.ClientTimeout(connect=5, total=None),
             allow_redirects=False,
-        ) as resp:
-            resp_headers = {k: v for k, v in resp.headers.items()
-                            if k.lower() not in ("transfer-encoding", "content-encoding")}
-            stream_resp = web.StreamResponse(status=resp.status, headers=resp_headers)
-            await stream_resp.prepare(request)
+        )
+    except aiohttp.ClientConnectorError as e:
+        return web.Response(status=502, text=f"Cannot reach ha-mcp: {e}")
+    except asyncio.TimeoutError:
+        return web.Response(status=504, text="ha-mcp connection timed out")
+
+    resp_headers = {k: v for k, v in resp.headers.items()
+                    if k.lower() not in _HOP_BY_HOP}
+
+    content_type = resp.headers.get("content-type", "")
+    is_streaming = "text/event-stream" in content_type or resp.headers.get("transfer-encoding") == "chunked"
+
+    if is_streaming:
+        stream_resp = web.StreamResponse(status=resp.status, headers=resp_headers)
+        await stream_resp.prepare(request)
+        try:
             async for chunk in resp.content.iter_any():
                 await stream_resp.write(chunk)
-            await stream_resp.write_eof()
-            return stream_resp
+        except (ConnectionResetError, asyncio.CancelledError):
+            pass
+        finally:
+            resp.close()
+        return stream_resp
+    else:
+        body = await resp.read()
+        resp.close()
+        return web.Response(status=resp.status, headers=resp_headers, body=body)
 
 
 def make_app() -> web.Application:
     app = web.Application()
     app.router.add_get("/", handle_index)
     app.router.add_post("/api/save", handle_save)
-    # Stream proxy for MCP transport paths
-    app.router.add_route("*", "/mcp{path:.*}", handle_proxy_stream)
+    app.router.add_route("*", "/mcp{path:.*}", handle_proxy)
     return app
 
 
