@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+APP_DIR="${APP_DATA_DIR:-$(readlink -f "$(dirname "${BASH_SOURCE[0]}")/..")}"
+DATA_DIR="${APP_DIR}/data"
+ENV_FILE="${DATA_DIR}/.env"
+
+mkdir -p "${DATA_DIR}"
+
+# Write .env with the HA URL pre-filled from Umbrel's device domain.
+# Preserves any existing HOMEASSISTANT_TOKEN the user already set.
+if [[ ! -f "${ENV_FILE}" ]]; then
+    cat > "${ENV_FILE}" <<EOF
+# Home Assistant MCP Server configuration
+# Edit this file to connect to your Home Assistant instance.
+
+# URL is pre-filled for the Umbrel Home Assistant app (port 8123).
+# Change this if your Home Assistant runs elsewhere.
+HOMEASSISTANT_URL=http://${DEVICE_DOMAIN_NAME:-umbrel.local}:8123
+
+# Paste your long-lived access token here.
+# Get one from: Home Assistant → Profile → Long-Lived Access Tokens → Create Token
+HOMEASSISTANT_TOKEN=
+EOF
+    echo "ha-mcp: created ${ENV_FILE} — add your HOMEASSISTANT_TOKEN and restart the app."
+else
+    # File exists — update only the URL line if the domain changed, leave the token untouched.
+    if [[ -n "${DEVICE_DOMAIN_NAME:-}" ]]; then
+        sed -i "s|^HOMEASSISTANT_URL=http://.*:8123|HOMEASSISTANT_URL=http://${DEVICE_DOMAIN_NAME}:8123|" "${ENV_FILE}"
+    fi
+fi
